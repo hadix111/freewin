@@ -1,0 +1,26 @@
+name: Container Watchdog
+
+on:
+  schedule:
+    # هر 5 دقیقه اجرا می‌شود
+    - cron: '*/5 * * * *'
+  push:
+    branches: [ main ]  # اختیاری: برای تست روی push هم اجرا شود
+
+jobs:
+  monitor-and-restart:
+    runs-on: self-hosted
+    steps:
+      - name: Check and restart Docker container
+        shell: powershell
+        run: |
+          $containerId = "478d06b51702" # آیدی یا نام کانتینر خودت
+          $container = docker inspect -f '{{.State.Running}}' $containerId 2>$null
+          
+          if ($container -ne "true") {
+              Write-Host "Container is not running. Starting it..."
+              docker start -ai $containerId
+              Write-Host "Container started successfully."
+          } else {
+              Write-Host "Container is running."
+          }
