@@ -1,0 +1,28 @@
+name: Container Watchdog
+
+on:
+  schedule:
+    - cron: '*/5 * * * *' # هر 5 دقیقه
+  push:
+    branches: [ main ]
+
+jobs:
+  monitor-and-restart:
+    runs-on: self-hosted
+
+    steps:
+      - name: Check if container is running
+        id: check
+        run: |
+          if [ "$(docker inspect -f '{{.State.Running}}' 478d06b51702 2>/dev/null)" != "true" ]; then
+            echo "container_was_running=0" >> $GITHUB_OUTPUT
+          else
+            echo "container_was_running=1" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Restart container if stopped
+        if: steps.check.outputs.container_was_running == '0'
+        run: |
+          echo "Container is not running! Starting it now..."
+          docker start 478d06b51702 || docker run -d --name 478d06b51702 my-image
+          echo "Container started successfully."
