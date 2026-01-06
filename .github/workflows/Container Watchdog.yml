@@ -1,0 +1,39 @@
+name: Container Watchdog
+
+on:
+  schedule:
+    # هر 5 دقیقه یکبار اجرا می‌شود
+    - cron: '*/5 * * * *'
+  push:
+    branches: [ main ]
+
+jobs:
+  monitor-and-restart:
+    runs-on: self-hosted
+
+    steps:
+      - name: Check if container is running
+        shell: powershell -ExecutionPolicy Bypass
+        id: check
+        run: |
+          try {
+              $running = docker inspect -f '{{.State.Running}}' 478d06b51702 2>$null
+              if ($running -eq 'true') {
+                  Write-Output "Container is running."
+                  echo "container_was_running=0" >> $env:GITHUB_OUTPUT
+              } else {
+                  Write-Output "Container is NOT running."
+                  echo "container_was_running=1" >> $env:GITHUB_OUTPUT
+              }
+          } catch {
+              Write-Output "Container does not exist or Docker not found."
+              echo "container_was_running=1" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Restart container if stopped
+        if: steps.check.outputs.container_was_running == '1'
+        shell: powershell -ExecutionPolicy Bypass
+        run: |
+          Write-Output "Starting container..."
+          docker start -ai 478d06b51702
+          Write-Output "Container started successfully."
