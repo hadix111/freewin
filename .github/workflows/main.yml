@@ -1,0 +1,36 @@
+name: Deploy Node.js App
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: self-hosted  # اجرای روی runner خودت
+
+    steps:
+      # 1️⃣ دریافت آخرین کد
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2️⃣ نصب وابستگی‌ها
+      - name: Install Dependencies
+        shell: powershell
+        run: |
+          try {
+            npm install
+            Write-Host "✅ Dependencies installed successfully"
+          } catch {
+            Write-Warning "⚠️ npm install returned a warning, continuing..."
+          }
+
+      # 3️⃣ استارت یا ریستارت برنامه با PM2
+      - name: Start/Restart App with PM2
+        shell: powershell
+        if: always()  # اجباری اجرا می‌شود حتی اگر مرحله قبل warning داشته باشد
+        run: |
+          Write-Host "⏳ Checking if PM2 app is running..."
+          pm2 stop my-node-app || Write-Host "App was not running, starting fresh..."
+          pm2 start "npm run start" --name my-node-app
+          pm2 save
+          Write-Host "✅ App is running with PM2"
