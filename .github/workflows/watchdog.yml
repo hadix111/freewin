@@ -1,0 +1,28 @@
+name: Container Watchdog
+
+on:
+  schedule:
+    # هر 5 دقیقه یکبار اجرا می‌شود. syntax: cron(دقیقه ساعت روز ماه روز‌هفته)
+    - cron: '*/5 * * * *'
+  # اختیاری: با هر بار push کد نیز اجرا شود (برای تست)
+  push:
+    branches: [ main ]
+
+jobs:
+  monitor-and-restart:
+    runs-on: self-hosted # روی کامپیوتر شما اجرا می‌شود
+
+    steps:
+      - name: Check if container is running
+        id: check
+        run: |
+          # بررسی می‌کند کانتینر در حال اجراست یا نه. اگر نبود، کد خروجی 1 برمی‌گرداند.
+          docker inspect -f '{{.State.Running}}' 478d06b51702 2>/dev/null | grep -q "true"
+          echo "container_was_running=$?" >> $GITHUB_OUTPUT
+
+      - name: Restart container if stopped
+        if: steps.check.outputs.container_was_running == '1'
+        run: |
+          echo "Container is not running! Starting it now..."
+          docker start -ai 478d06b51702
+          echo "Container started successfully."
